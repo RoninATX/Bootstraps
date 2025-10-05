@@ -2,6 +2,7 @@
 Bootstrap scripts for my various Orange and Raspberry Pi Configs
 
 🧩 bootstrap-secure.sh
+Run command: `curl -fsSL https://raw.githubusercontent.com/RoninATX/Bootstraps/main/bootstrap-secure.sh | sudo bash`
 
 bootstrap-secure.sh is a minimal yet production-hardened Ubuntu bootstrap script designed to bring a fresh cloud or homelab instance up to a secure and functional baseline.
 It handles user setup, SSH lockdown, system updates, Docker installation, and deploys Portainer CE for container management.
