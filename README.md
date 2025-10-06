@@ -1,8 +1,12 @@
 # Bootstraps
-Bootstrap scripts for my various Orange and Raspberry Pi Configs
+Bootstrap scripts for my various Orange and Raspberry Pi Configs.
+
+🧩 bootstrap-secure-pi.sh
+Run command: `curl -fsSL https://raw.githubusercontent.com/RoninATX/Bootstraps/main/bootstrap-secure-pi.sh | sudo bash`
+* Raspberry Pi allows you to preconfigure things like the admin user at burn time in the Pi Manager software, so this pi version skips the new user creation and simply captures the whoami user.
+  
 
 🧩 bootstrap-secure.sh
-
 Run command: `curl -fsSL https://raw.githubusercontent.com/RoninATX/Bootstraps/main/bootstrap-secure.sh | sudo bash`
 
 bootstrap-secure.sh is a minimal yet production-hardened Ubuntu bootstrap script designed to bring a fresh cloud or homelab instance up to a secure and functional baseline.
