@@ -139,8 +139,12 @@ F2B_STATUS="$(fail2ban-client status sshd 2>/dev/null || true)"
 
 # ---- Summary -----------------------------------------------------------------
 IP4_LOCAL="$(hostname -I 2>/dev/null | awk '{print $1}')"
-PUB_IP="$(curl -4 -s https://ifconfig.io || true)"
-[[ -z "${PUB_IP}" ]] && PUB_IP="(unavailable)"
+INCLUDE_WAN_URL="${INCLUDE_WAN_URL:-0}"
+
+if [[ "${INCLUDE_WAN_URL}" == "1" ]]; then
+  PUB_IP="$(curl -4 -s https://ifconfig.io || true)"
+  [[ -z "${PUB_IP}" ]] && PUB_IP="(unavailable)"
+fi
 
 # Hardware detection for summary
 if [[ -r /proc/device-tree/model ]]; then
@@ -168,7 +172,9 @@ SUMMARY="/root/BOOTSTRAP_SUMMARY.txt"
   echo "Docker              : installed and running"
   echo "Portainer container : up (portainer/portainer-ce:latest)"
   echo "Portainer URL (LAN) : https://${IP4_LOCAL:-<your-ip>}:9443"
-  echo "Portainer URL (WAN) : https://${PUB_IP}:9443"
+  if [[ "${INCLUDE_WAN_URL}" == "1" ]]; then
+    echo "Portainer URL (WAN) : https://${PUB_IP}:9443"
+  fi
   echo
   echo "Unattended upgrades : enabled (security updates nightly)"
   echo "Auto-reboot         : disabled"
