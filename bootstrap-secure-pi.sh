@@ -19,7 +19,28 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # ---- Inputs (noninteractive) -------------------------------------------------
-NEWUSER="$(whoami)"
+if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+  NEWUSER="${SUDO_USER}"
+else
+  NEWUSER="$(getent passwd | awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}')"
+fi
+
+if [[ -z "${NEWUSER:-}" ]]; then
+  echo "Unable to determine admin user" >&2
+  exit 1
+fi
+
+ADMIN_ENTRY="$(getent passwd "$NEWUSER" || true)"
+ADMIN_HOME=""
+if [[ -n "$ADMIN_ENTRY" ]]; then
+  IFS=':' read -r _ _ _ _ _ ADMIN_HOME _ <<<"$ADMIN_ENTRY"
+fi
+if [[ -z "$ADMIN_HOME" ]]; then
+  ADMIN_HOME="/home/${NEWUSER}"
+fi
+
+ADMIN_SSH_DIR="${ADMIN_HOME}/.ssh"
+
 echo "Admin username: $NEWUSER"
 
 # ---- System updates ----------------------------------------------------------
@@ -55,9 +76,9 @@ patch_line "UsePAM"                 "yes"
 [[ -f "$CLOUDINIT_DROPIN" ]] && rm -f "$CLOUDINIT_DROPIN"
 
 # Ensure SSH dir for admin user (Pi Imager likely injected keys)
-mkdir -p "/home/${NEWUSER}/.ssh"
-chmod 700 "/home/${NEWUSER}/.ssh"
-chown -R "${NEWUSER}:${NEWUSER}" "/home/${NEWUSER}/.ssh"
+mkdir -p "$ADMIN_SSH_DIR"
+chmod 700 "$ADMIN_SSH_DIR"
+chown -R "${NEWUSER}:${NEWUSER}" "$ADMIN_SSH_DIR"
 
 # Validate config; reload to avoid dropping session
 /usr/sbin/sshd -t
@@ -154,16 +175,17 @@ else
 fi
 
 SUMMARY="/root/BOOTSTRAP_SUMMARY.txt"
-{
-  echo "✅ Secure bootstrap (Pi slim) complete."
-  echo
-  echo "Admin user          : ${NEWUSER}"
-  echo "Hostname            : $(hostname)"
-  echo "Hardware model       : ${HW_MODEL}"
-    echo "Password auth       : disabled (enforced)"
+  {
+    echo "✅ Secure bootstrap (Pi slim) complete."
+    echo
+    echo "Admin user          : ${NEWUSER}"
+    echo "Admin home          : ${ADMIN_HOME}"
+    echo "Hostname            : $(hostname)"
+    echo "Hardware model       : ${HW_MODEL}"
+      echo "Password auth       : disabled (enforced)"
   echo "Root login          : disabled"
-  if [[ -f "/home/${NEWUSER}/.ssh/authorized_keys" ]]; then
-    echo "SSH keys            : /home/${NEWUSER}/.ssh/authorized_keys"
+  if [[ -f "${ADMIN_SSH_DIR}/authorized_keys" ]]; then
+    echo "SSH keys            : ${ADMIN_SSH_DIR}/authorized_keys"
   else
     echo "SSH keys            : (none copied; Pi Imager likely injected)"
   fi
