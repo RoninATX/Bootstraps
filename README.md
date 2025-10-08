@@ -13,6 +13,15 @@ bootstrap-secure.sh is a minimal yet production-hardened Ubuntu bootstrap script
 It handles user setup, SSH lockdown, system updates, Docker installation, and deploys Portainer CE for container management.
 Additionally, it includes automated security layers such as fail2ban (for brute-force protection) and unattended-upgrades (for nightly security patching).
 
+# Whitelisting SSH Sources
+If you lose access after enabling fail2ban, you can unblock known-good clients by running:
+
+```bash
+sudo fail2ban-client set sshd unbanip <your-ip>
+```
+
+Repeat the command for each workstation or server that should retain SSH access. Replace `<your-ip>` with the actual source address that you want to restore.
+
 🚀 Features
 Category	Description
 System Base	Assumes an Ubuntu host (cloud VPS or Raspberry Pi). Performs apt updates and upgrades automatically.
