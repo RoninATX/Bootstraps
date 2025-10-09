@@ -82,6 +82,7 @@ chown -R "${NEWUSER}:${NEWUSER}" "$ADMIN_SSH_DIR"
 
 # Validate config; reload to avoid dropping session
 /usr/sbin/sshd -t
+systemctl enable --now ssh >/dev/null 2>&1 || true
 systemctl reload ssh || systemctl restart ssh
 
 # ---- UFW rules (non-destructive) --------------------------------------------
@@ -205,6 +206,9 @@ SUMMARY="/root/BOOTSTRAP_SUMMARY.txt"
     echo "findtime/bantime    : 10m / 1h ; maxretry=5"
   echo "fail2ban status     :"
   echo "${F2B_STATUS}"
+  echo
+  echo "UFW status          :"
+  ufw status verbose || true
 } | tee "$SUMMARY"
 
 echo "Summary saved to: $SUMMARY"
