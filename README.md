@@ -4,6 +4,8 @@ Bootstrap scripts for my various Orange and Raspberry Pi Configs.
 🧩 bootstrap-secure-pi.sh
 Run command: `curl -fsSL https://raw.githubusercontent.com/RoninATX/Bootstraps/main/bootstrap-secure-pi.sh | sudo bash`
 * Raspberry Pi allows you to preconfigure things like the admin user at burn time in the Pi Manager software, so this pi version skips the new user creation and simply captures the whoami user.
+* The script does not accept positional arguments. It must be run as root (or via `sudo`) and will automatically target the first non-root user.
+* Optional environment variable: set `INCLUDE_WAN_URL=1` if you want the summary to include the public Portainer URL. If unset or `0`, only the LAN URL is written to `/root/BOOTSTRAP_SUMMARY.txt`.
   
 
 🧩 bootstrap-secure.sh
