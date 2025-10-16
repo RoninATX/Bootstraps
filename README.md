@@ -24,6 +24,11 @@ sudo fail2ban-client set sshd unbanip <your-ip>
 
 Repeat the command for each workstation or server that should retain SSH access. Replace `<your-ip>` with the actual source address that you want to restore.
 
+# Connecting after the script SSH lockdown
+After the bootstrap script finishes, the connection process changes slightly. Make sure you are passing in the admin account name as part of the host (you set in the Pi Manager) when SSHing in:
+  `ssh someadmin@192.168.x.x`
+Otherwise, a confusing situation may arise where you're getting outright `Connection Eefused` errors, particularly when connecting via Windows machines where a generic SSH attempt `ssh 192.168.x.x`  passes your current Windows account name in.
+
 🚀 Features
 Category	Description
 System Base	Assumes an Ubuntu host (cloud VPS or Raspberry Pi). Performs apt updates and upgrades automatically.
