@@ -14,3 +14,4 @@ The Raspberry Pi platform allows preconfiguring the admin user at burn time in t
 - The script does not accept positional arguments.
 - Run it as `root` or via `sudo`; it automatically targets the first non-root user.
 - Optional environment variable: set `INCLUDE_WAN_URL=1` if you want the summary to include the public Portainer URL. If unset or `0`, only the LAN URL is written to `/root/BOOTSTRAP_SUMMARY.txt`.
+- Docker and Docker Compose are installed from the official repository, the admin user is added to the `docker` group, and interactive sudo sessions are automatically re-entered with `sg docker newgrp` so the group membership is immediately available without logging out.

@@ -14,6 +14,8 @@
 # -----------------------------------------------------------------------------
 set -euo pipefail
 
+REFRESH_DOCKER_GROUP=0
+
 if [[ $EUID -ne 0 ]]; then
   echo "Please run as root (e.g., sudo -i; then bash bootstrap-secure-pi.slim.sh)"; exit 1
 fi
@@ -108,6 +110,14 @@ apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin do
 systemctl enable --now docker
 usermod -aG docker "$NEWUSER" || true
 
+if id -nG "$NEWUSER" | tr ' ' '\n' | grep -qx 'docker'; then
+  if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" == "$NEWUSER" && -t 1 ]]; then
+    REFRESH_DOCKER_GROUP=1
+  fi
+else
+  echo "Warning: unable to confirm docker group membership for ${NEWUSER}" >&2
+fi
+
 # ---- Portainer CE ------------------------------------------------------------
 docker volume create portainer_data >/dev/null 2>&1 || true
 if docker ps -a --format '{{.Names}}' | grep -q '^portainer$'; then
@@ -193,6 +203,11 @@ SUMMARY="/root/BOOTSTRAP_SUMMARY.txt"
   echo "UFW                 : enabled; allowing 22/tcp and 9443/tcp"
   echo
   echo "Docker              : installed and running"
+  if id -nG "$NEWUSER" | tr ' ' '\n' | grep -qx 'docker'; then
+    echo "Docker group        : ${NEWUSER} (non-root access enabled)"
+  else
+    echo "Docker group        : ${NEWUSER} (add failed; see logs)"
+  fi
   echo "Portainer container : up (portainer/portainer-ce:latest)"
   echo "Portainer URL (LAN) : https://${IP4_LOCAL:-<your-ip>}:9443"
   if [[ "${INCLUDE_WAN_URL}" == "1" ]]; then
@@ -212,3 +227,20 @@ SUMMARY="/root/BOOTSTRAP_SUMMARY.txt"
 } | tee "$SUMMARY"
 
 echo "Summary saved to: $SUMMARY"
+
+if [[ "$REFRESH_DOCKER_GROUP" == "1" ]]; then
+  cat <<'EOF'
+
+🔁 Re-entering your shell with updated docker group membership for the current session...
+
+EOF
+  su - "$NEWUSER" -s /bin/bash <<'EOF'
+if command -v sg >/dev/null 2>&1; then
+  exec sg docker newgrp
+elif command -v newgrp >/dev/null 2>&1; then
+  exec newgrp docker
+else
+  echo "Neither sg nor newgrp is available. Please log out and back in to pick up docker group membership."
+fi
+EOF
+fi
