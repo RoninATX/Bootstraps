@@ -6,3 +6,4 @@ A growing collection of quality-of-life scripts to bootstrap fresh servers, intr
 - [bootstrap-secure.sh](docs/bootstrap-secure.md)
 - [bootstrap-secure-pi.sh](docs/bootstrap-secure-pi.md)
 - [ddns-sync.sh](docs/ddns-sync.md)
+- [bootstrap-ddns-sync.sh](docs/bootstrap-ddns-sync.md)
