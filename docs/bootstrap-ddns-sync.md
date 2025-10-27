@@ -6,10 +6,14 @@ credentials and the list of DNS records to manage.
 
 ## Quick start
 
-You can run the bootstrapper directly with curl:
+Create a folder, download the bootstrapper, and run it:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/RoninATX/Bootstraps/main/bootstrap-ddns-sync.sh | sudo bash
+mkdir -p ddns
+cd ddns
+curl -fsSL https://raw.githubusercontent.com/RoninATX/Bootstraps/main/bootstrap-ddns-sync.sh -o bootstrap-ddns-sync.sh
+chmod +x bootstrap-ddns-sync.sh
+sudo ./bootstrap-ddns-sync.sh
 ```
 
 The script must be run as root (or via `sudo`). It will:
