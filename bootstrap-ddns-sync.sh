@@ -40,7 +40,7 @@ trap - EXIT
 printf 'Downloaded ddns-sync.sh and installed to %s\n\n' "$INSTALL_PATH"
 
 create_interactive_config() {
-  local use_token auth_choice email credential ttl_value record_type domains=()
+  local use_token auth_choice email credential domains=()
 
   echo "Let's create the ddns-sync configuration."
 
@@ -76,15 +76,6 @@ create_interactive_config() {
   done
 
   echo
-  read -rp "DNS record type to manage [A]: " record_type
-  record_type="${record_type:-A}"
-  record_type="${record_type^^}"
-
-  read -rp "Desired TTL in seconds (use 1 for auto) [300]: " ttl_value
-  ttl_value="${ttl_value:-300}"
-  ttl_value="${ttl_value//[[:space:]]/}"
-
-  echo
   echo "Enter each DNS record you want ddns-sync.sh to manage."
   echo "Press Enter on a blank line when you are finished."
   while true; do
@@ -107,8 +98,8 @@ create_interactive_config() {
       echo "CLOUDFLARE_EMAIL=\"$email\""
       echo "CLOUDFLARE_API_KEY=\"$credential\""
     fi
-    printf 'TTL="%s"\n' "$ttl_value"
-    printf 'TYPE="%s"\n' "$record_type"
+    echo 'TTL="3600"'
+    echo 'TYPE="A"'
     echo
     echo '# List each DNS record to keep updated. Feel free to edit manually later.'
     echo 'DNS_RECORDS=('
@@ -134,7 +125,7 @@ CLOUDFLARE_API_KEY="paste-your-global-api-key"
 # If you prefer to use an API token instead of a global key, set it here and
 # comment out CLOUDFLARE_API_KEY and CLOUDFLARE_EMAIL above.
 # CLOUDFLARE_API_TOKEN="paste-your-api-token"
-TTL="300"
+TTL="3600"
 TYPE="A"
 
 # Add one DNS record per quoted line. For example:
