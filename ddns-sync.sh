@@ -15,7 +15,8 @@
 #
 # The script fetches the current public IPv4 address, compares it with the
 # Cloudflare DNS records listed in DNS_RECORDS, and updates any records whose
-# content differs from the detected IP address.
+# content differs from the detected IP address. Pass -t/--test to perform a dry
+# run that reports what would change without updating Cloudflare.
 # -----------------------------------------------------------------------------
 
 set -euo pipefail
@@ -23,6 +24,9 @@ set -euo pipefail
 CONFIG_PATH="${CONFIG_PATH:-/etc/ddns-sync.conf}"
 API_BASE="https://api.cloudflare.com/client/v4"
 CURL_COMMON_OPTS=(-fsS --retry 3 --retry-delay 2 --retry-connrefused --max-time 15)
+
+SCRIPT_NAME=$(basename "$0")
+TEST_MODE=false
 
 errexit() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [ERROR] $*" >&2
@@ -33,6 +37,18 @@ log() {
   echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] $*"
 }
 
+usage() {
+  cat <<EOF
+Usage: $SCRIPT_NAME [-t|--test]
+
+Synchronize Cloudflare DNS A records with the host's current public IPv4
+address.
+
+  -t, --test    Perform a dry run and report which records would be updated.
+  -h, --help    Show this help message and exit.
+EOF
+}
+
 require_command() {
   local cmd
   for cmd in "$@"; do
@@ -41,6 +57,36 @@ require_command() {
     fi
   done
 }
+
+while (($#)); do
+  case "$1" in
+    -t|--test)
+      TEST_MODE=true
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      usage >&2
+      errexit "Unknown option: $1"
+      ;;
+    *)
+      usage >&2
+      errexit "Unexpected argument: $1"
+      ;;
+  esac
+  shift
+done
+
+if (($#)); then
+  usage >&2
+  errexit "Unexpected argument: $1"
+fi
 
 require_command curl jq
 
@@ -197,6 +243,11 @@ update_record_if_needed() {
     return
   fi
 
+  if [[ $TEST_MODE == true ]]; then
+    log "Test mode: would update $record from $current_ip to $PUBLIC_IP"
+    return
+  fi
+
   ttl_value=$(normalize_ttl "$TTL")
   if [[ -z "$ttl_value" || ! "$ttl_value" =~ ^[0-9]+$ ]]; then
     log "TTL value '$TTL' is invalid; defaulting to 300"
@@ -231,4 +282,8 @@ for record in "${MANAGED_RECORDS[@]}"; do
 
 done
 
-log "Sync complete"
+if [[ $TEST_MODE == true ]]; then
+  log "Dry run complete"
+else
+  log "Sync complete"
+fi
