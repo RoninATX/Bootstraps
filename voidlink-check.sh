@@ -283,7 +283,8 @@ done
 
 print_check "Checking for services with suspicious ExecStart paths..."
 suspicious_paths=("/tmp" "/dev/shm" "/var/tmp" "/run/user")
-for spath in /etc/systemd/system/*.service /usr/lib/systemd/system/*.service 2>/dev/null; do
+service_files=$(find /etc/systemd/system /usr/lib/systemd/system /lib/systemd/system -maxdepth 1 -name "*.service" 2>/dev/null)
+while IFS= read -r spath; do
     if [[ -f "$spath" ]]; then
         exec_start=$(grep -E "^ExecStart=" "$spath" 2>/dev/null | head -1)
         for susp in "${suspicious_paths[@]}"; do
@@ -292,7 +293,7 @@ for spath in /etc/systemd/system/*.service /usr/lib/systemd/system/*.service 2>/
             fi
         done
     fi
-done
+done <<< "$service_files"
 
 print_ok "Systemd service scan complete"
 
