@@ -233,4 +233,5 @@ MIT — Use freely, modify as needed, no warranty.
 ## Credits
 
 - Detection logic based on [Check Point Research's VoidLink analysis](https://research.checkpoint.com/2026/voidlink-the-cloud-native-malware-framework/)
+- Script and documentation developed in collaboration with [Claude](https://claude.ai) (Opus 4.5) by Anthropic
 - Script maintained at [RoninATX/Bootstraps](https://github.com/RoninATX/Bootstraps)
