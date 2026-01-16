@@ -230,16 +230,14 @@ if [[ $EUID -eq 0 ]]; then
     fi
 fi
 
-print_check "Checking for modules loaded from unusual paths..."
-# Legitimate modules are typically in /lib/modules/$(uname -r)/
-if [[ -r /proc/modules ]]; then
-    while read -r mod_name _ _ _ _ mod_path _; do
-        if [[ "$mod_path" != "(Live)" && "$mod_path" != "-" && -n "$mod_path" ]]; then
-            if [[ ! "$mod_path" =~ ^/lib/modules/ ]]; then
-                print_warning "Module loaded from unusual path: $mod_name -> $mod_path"
-            fi
-        fi
-    done < /proc/modules
+print_check "Checking for modules not in standard kernel module path..."
+kernel_mod_dir="/lib/modules/$(uname -r)"
+while read -r mod_name _; do
+    # Check if module exists in standard locations
+    if ! find "$kernel_mod_dir" -name "${mod_name}.ko*" 2>/dev/null | grep -q .; then
+        print_info "Module '$mod_name' not found in $kernel_mod_dir (may be built-in or third-party)"
+    fi
+done < /proc/modules
 fi
 
 print_check "Checking for unsigned/tainted kernel..."
@@ -282,16 +280,15 @@ for spath in $SYSTEMD_PATHS; do
 done
 
 print_check "Checking for services with suspicious ExecStart paths..."
-suspicious_paths=("/tmp" "/dev/shm" "/var/tmp" "/run/user")
 service_files=$(find /etc/systemd/system /usr/lib/systemd/system /lib/systemd/system -maxdepth 1 -name "*.service" 2>/dev/null)
 while IFS= read -r spath; do
     if [[ -f "$spath" ]]; then
         exec_start=$(grep -E "^ExecStart=" "$spath" 2>/dev/null | head -1)
-        for susp in "${suspicious_paths[@]}"; do
-            if echo "$exec_start" | grep -q "$susp"; then
-                print_warning "Suspicious ExecStart in $(basename "$spath"): $exec_start"
-            fi
-        done
+        # Use word boundaries or path patterns to avoid false matches
+        # e.g., /tmp/ or /tmp$ but not /tmpfiles
+        if echo "$exec_start" | grep -qE "(^|[= ])/tmp(/|$| )|/dev/shm(/|$| )|/var/tmp(/|$| )"; then
+            print_warning "Suspicious ExecStart in $(basename "$spath"): $exec_start"
+        fi
     fi
 done <<< "$service_files"
 
@@ -414,7 +411,8 @@ fi
 
 print_check "Checking for raw socket usage (ICMP tunneling indicator)..."
 if [[ $EUID -eq 0 ]]; then
-    raw_sockets=$(ss -w 2>/dev/null | grep -v "^Netid")
+    # Filter out standard kernel ipv6-icmp socket which is always present
+    raw_sockets=$(ss -w 2>/dev/null | grep -v "^Netid" | grep -v "ipv6-icmp.*\*:\*")
     if [[ -n "$raw_sockets" ]]; then
         print_warning "Raw sockets detected (could indicate ICMP tunneling):"
         echo "$raw_sockets" | while read -r line; do
@@ -570,8 +568,12 @@ else
 fi
 
 print_check "Checking if HISTFILE is disabled..."
-if [[ -z "$HISTFILE" ]] || [[ "$HISTSIZE" == "0" ]] || [[ "$HISTFILESIZE" == "0" ]]; then
-    print_warning "History logging appears to be disabled"
+# Note: Environment checks are unreliable when running via sudo
+# Focus on whether history is actually being written
+if [[ -f "$hist_file" && $(stat -c '%s' "$hist_file" 2>/dev/null) -gt 0 ]]; then
+    print_ok "History file exists and has content"
+elif [[ "$HISTSIZE" == "0" ]] || [[ "$HISTFILESIZE" == "0" ]]; then
+    print_warning "History logging appears to be disabled (HISTSIZE or HISTFILESIZE is 0)"
 fi
 
 print_check "Checking auth logs for gaps or anomalies..."
