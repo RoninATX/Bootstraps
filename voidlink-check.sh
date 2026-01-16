@@ -238,7 +238,6 @@ while read -r mod_name _; do
         print_info "Module '$mod_name' not found in $kernel_mod_dir (may be built-in or third-party)"
     fi
 done < /proc/modules
-fi
 
 print_check "Checking for unsigned/tainted kernel..."
 if [[ -r /proc/sys/kernel/tainted ]]; then
