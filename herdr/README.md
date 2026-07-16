@@ -52,6 +52,11 @@ Every turn arriving in a pane is exactly one of three classes, told apart by its
 Each is a standard Claude Code skill (`SKILL.md` with frontmatter). The coordinator and child
 `cross-coordinate` skills are **two halves of one protocol** — read them as a matched pair.
 
+**New to this?** [`EXAMPLE.md`](EXAMPLE.md) is a start-to-finish walkthrough — a fresh herdr run
+set up as a Coordinator brokering two projects (`api` + `web`), including one full coordination
+round-trip with the actual `From …:` messages that cross the panes. It's the fastest way to see
+the pattern move.
+
 ## How to adapt (fill in the placeholders)
 
 Copy the folders you need into the relevant `.claude/skills/` directory, then search-and-replace:
