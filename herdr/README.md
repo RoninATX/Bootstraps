@@ -1,7 +1,8 @@
 # herdr coordinator skills
 
-A portable, project-agnostic template for running a **multi-pane [herdr](https://github.com/) workspace**
-where one Claude session acts as a **Coordinator** and the others act as **child apps**, all
+A portable, project-agnostic template for running a **multi-pane herdr workspace** (herdr being
+an agent/pane/tab orchestrator that runs each Claude session in its own managed pane) where one
+session acts as a **Coordinator** and the others act as **child apps**, all
 communicating through a disciplined message protocol instead of you copy-pasting between panes.
 
 These skills were battle-tested driving a four-pane workspace (one coordinator + three sibling
@@ -66,9 +67,9 @@ Copy the folders you need into the relevant `.claude/skills/` directory, then se
 | `{StackName}`      | your umbrella/initiative name (or delete if you have none)       | `Acme` |
 | `{AppName}`        | **in the child skill** — that pane's own app name               | `Api` |
 | `{AppA}`,`{AppB}`… | the concrete child app/pane names                               | `Web`, `Worker` |
-| `{workspace-root}` | absolute path to the container dir the Coordinator runs in       | `C:\Users\me\Projects` |
+| `{workspace-root}` | absolute path to the container dir the Coordinator runs in       | `/home/me/acme` |
 | `{tracker}`        | your issue/task tracker command, or delete the tracking sections | `gh issue`, `jira` |
-| `{status-cmd}`     | your "what's next / current work" command, if any                | `/up-next` |
+| `{status-cmd}`     | your "what's next / current work" command, if any                | `/whats-next` |
 
 Notes:
 - **The Coordinator installs** `coordinator/*`. **Each child installs its own copy** of
