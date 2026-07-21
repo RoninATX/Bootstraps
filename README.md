@@ -12,4 +12,7 @@ Each script focuses on opinionated defaults that make it easy to get started qui
 - [voidlink-check.sh](docs/voidlink-check.md)
 
 ## herdr coordinator skills
-- [herdr/](herdr/README.md) — a portable, project-agnostic template for running a multi-pane [herdr](https://github.com/) workspace with one **Coordinator** session brokering several **child app** sessions over a disciplined message protocol. Drop-in Claude Code skills (coordinator + child sides) with all app-specific bits left as `{placeholder}`s to fill in.
+- [herdr/](herdr/README.md) — a portable, project-agnostic template for running a multi-pane herdr workspace with one **Coordinator** session brokering several **child app** sessions over a disciplined message protocol. Drop-in Claude Code skills (coordinator + child sides) with all app-specific bits left as `{placeholder}`s to fill in.
+
+## agent-harness skills
+- [agent-harness-skills/](agent-harness-skills/README.md) — general-purpose, **harness-agnostic** agent skills that work on both Claude Code and Devin (the only difference being `CLAUDE.md` vs `AGENTS.md` as the root instructions file). Currently: `knowledge-prep`, which stands up the lean-index + lazy-loaded `.claude/knowledge/` documentation pattern.
