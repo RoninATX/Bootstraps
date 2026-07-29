@@ -32,7 +32,7 @@ Everything app-specific is written as a `{placeholder}` you fill in once.
 - A human — the **Operator** — sits above all of it. An **unlabeled** turn in any pane is the
   Operator; their word overrides the choreography.
 
-### The labeling law (the whole protocol in three lines)
+### The labeling law (the core of the protocol, in three lines)
 
 Every turn arriving in a pane is exactly one of three classes, told apart by its prefix:
 
@@ -42,13 +42,31 @@ Every turn arriving in a pane is exactly one of three classes, told apart by its
 | `From Coordinator:`              | the **Coordinator**          | routing / a green-light — *not* human |
 | *(no prefix)*                    | the **Operator** (the human) | your normal user; overrides all       |
 
+### The one thing the labeling law can't fix
+
+Knowing *who* sent a turn doesn't tell you *whether it's still true*. Messages cross panes
+asynchronously, so a relay can age out in flight — a decision reaches one pane and not another,
+or arrives after that pane already acted. Two panes then report opposite things about the same
+file or commit, and **both are being honest**; they were simply told different things.
+
+So the protocol carries one rule the three classes don't cover:
+
+> **When accounts conflict, go read the artifact.** Don't adjudicate between panes and don't
+> poll a third for a tiebreak. The file cannot be out of date with itself.
+
+The Coordinator's corollary: **a reversal goes to every pane that received the original**, and
+the decision lands in the tracker *before* it's relayed. A pane still acting on a superseded
+instruction is following orders correctly — that's a fan-out failure, not a judgment one. The
+artifact rule is the backstop for when the fan-out fails anyway, which is why it's the stronger
+of the two: it doesn't depend on the Coordinator getting the broadcast right.
+
 ## What's here
 
 | Path                                   | Role        | Genericized from | Purpose |
 |----------------------------------------|-------------|------------------|---------|
-| `coordinator/cross-coordinate/`        | Coordinator | coordinator comms | Receive a child's ask, decide interruptibility, relay + green-light, tie out |
+| `coordinator/cross-coordinate/`        | Coordinator | coordinator comms | Receive a child's ask, decide interruptibility, relay + green-light, tie out; resolve conflicting reports and fan out reversals |
 | `coordinator/set-workspace/`           | Coordinator | workspace setup   | (Re)hydrate the panes: even the layout, name/color each pane, wire remote-control, poll status |
-| `child/cross-coordinate/`              | Child app   | one child's comms | Raise an ask *up* to the Coordinator; read the three inbound classes; work a sibling directly once green-lit |
+| `child/cross-coordinate/`              | Child app   | one child's comms | Raise an ask *up* to the Coordinator; read the three inbound classes; work a sibling directly once green-lit; hold rather than act on a stale instruction |
 
 Each is a standard Claude Code skill (`SKILL.md` with frontmatter). The coordinator and child
 `cross-coordinate` skills are **two halves of one protocol** — read them as a matched pair.

@@ -199,3 +199,9 @@ read.
 - Don't hand a sibling a bare tracker ID — it's repo-local; give an absolute-path / `--path`
   pointer if they need to read it.
 - Don't mark a coordination item completed while its checklist still has unchecked items.
+- Don't take another pane's word for the state of a shared artifact when it conflicts with what
+  I'm seeing — read the file. It cannot be out of date with itself, and two honest panes can be
+  told different things by a relay that aged out in flight.
+- Don't assume a `From Coordinator:` instruction is still current if it contradicts what I now
+  observe — flag the conflict up rather than acting on the older of two instructions. Holding is
+  cheap; shipping against a reversed decision is not.
