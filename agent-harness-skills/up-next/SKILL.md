@@ -1,6 +1,9 @@
 ---
 name: up-next
 description: Show what's up next in a beans-tracked project — the live in-progress work, queued todos, and active milestone focus — as a prioritized baseline. Invoke via `/up-next [repo]` or when the user asks "what's next / what's up next / what should I work on / where were we / current state of work." Defaults to the current project; pass a sibling repo name to target that one instead.
+disable-model-invocation: false
+allowed-tools: Read, Glob, Bash
+argument-hint: "(optional) sibling repo name; defaults to the current project"
 ---
 
 # up-next
@@ -22,11 +25,21 @@ Do **not** invoke for a single specific bean's status ("is `Proj-abcd` done?") �
 
 ## Repo resolution
 
-1. **Explicit arg** (`/up-next <RepoName>`): resolve it against the sibling repos that **actually exist**, by globbing `*/.beans` from the workspace root:
+1. **Explicit arg** (`/up-next <RepoName>`): resolve it against the sibling repos that **actually exist**, by listing the `.beans` dirs one level below the **workspace root** — the directory that holds the projects.
+
+   The glob is relative to where you are, so establish that first rather than assuming:
 
    ```bash
-   ls -d ../*/.beans        # or: find .. -maxdepth 2 -name .beans -type d
+   # invoked from inside a project (the usual case — cwd is the project):
+   ls -d ../*/.beans
+
+   # invoked at the workspace root itself:
+   ls -d ./*/.beans
    ```
+
+   Getting this wrong fails *silently and plausibly*, which is worse than failing empty. Running the `../` form while already at the workspace root searches the root's **parent** — and if the workspace itself is tracked, that returns exactly one hit: the workspace directory, looking for all the world like a single sibling repo named after it. Measured, not hypothetical. So a wrong-location glob doesn't produce an obviously-broken empty list; it produces a short, credible, wrong one.
+
+   Sanity-check the result before using it: the listing should contain the project you're standing in. If it doesn't, you globbed from the wrong level.
 
    Match the argument against those directory names, then target the hit with an absolute path. **Discover the list; never hardcode one.** A hardcoded table of repos is a remembered list, and a remembered list silently omits whatever was added after it was written — a repo that exists but isn't in the table reads as "unknown repo" rather than as a gap in the skill.
 
