@@ -161,7 +161,17 @@ def load_beans(repos: dict[str, Path]) -> list[dict]:
             err = proc.stderr.decode("utf-8", errors="replace").strip()
             print(f"  ! {name}: beans query failed: {err[:200]}", file=sys.stderr)
             continue
-        for bean in json.loads(out).get("beans", []):
+        try:
+            payload = json.loads(out)
+        except json.JSONDecodeError as e:
+            # A zero exit code is not a promise of clean JSON on stdout -- a CLI
+            # can prepend a warning line, or truncate under load. Skip the segment
+            # rather than aborting: this is a whole-workspace tool, and one noisy
+            # repo must not take down the analysis of the other eight.
+            print(f"  ! {name}: beans returned unparseable JSON ({e}); skipping segment",
+                  file=sys.stderr)
+            continue
+        for bean in payload.get("beans", []):
             bean["repo"] = name
             rows.append(bean)
     return rows
@@ -586,14 +596,36 @@ def build_segment_graph(repo: str, cross: bool = False) -> nx.MultiDiGraph:
 
 
 def resolve(g: nx.MultiDiGraph, target: str) -> str | None:
-    """Accept a bean id, a doc stem, or a kind/stem path -- any casing."""
+    """Accept a bean id, a doc stem, or a kind/stem path -- any casing.
+
+    An exact node id wins outright. Otherwise match on trailing stem or title, and
+    treat MULTIPLE matches as ambiguous rather than picking one. Silently taking
+    the first answers a different question than the one asked, and the pick would
+    follow node iteration order -- the same load-order dependency `_resolve_doc_ref`
+    exists to avoid internally. This is the user-facing entry point, so it is the
+    worse place to guess: `context deployment` in a segment holding both
+    `knowledge/deployment` and `wiki/Deployment` is a real collision, not a
+    hypothetical one.
+    """
     t = target.lower()
     for n in g.nodes:
         if n.lower() == t:
             return n
     hits = [n for n in g.nodes
             if n.lower().endswith("/" + t) or g.nodes[n].get("title", "").lower() == t]
-    return hits[0] if len(hits) == 1 else (hits[0] if hits else None)
+    if len(hits) == 1:
+        return hits[0]
+    # One owner for the failure message. Leaving the caller to also report
+    # "not found" would print that directly under "2 matches" -- two messages
+    # describing one outcome, and contradicting each other.
+    if hits:
+        print(f"{target!r} is ambiguous in segment {g.graph.get('segment')} -- "
+              f"{len(hits)} matches: {', '.join(sorted(hits))}\n"
+              f"  re-run with the full kind/stem form to pick one.", file=sys.stderr)
+    else:
+        print(f"no artifact matching {target!r} in segment "
+              f"{g.graph.get('segment')}", file=sys.stderr)
+    return None
 
 
 # How each relation reads when it lands in a reading list.
@@ -645,9 +677,7 @@ def rot_report(g: nx.MultiDiGraph) -> None:
 def context_report(g: nx.MultiDiGraph, target: str, hops: int = 1) -> None:
     node = resolve(g, target)
     if node is None:
-        print(f"no artifact matching {target!r} in segment "
-              f"{g.graph.get('segment')}", file=sys.stderr)
-        return
+        return          # resolve() already reported why (missing vs ambiguous)
 
     d = g.nodes[node]
     print(f"\n{'=' * 78}\n{node}  [{d.get('kind')}]"
