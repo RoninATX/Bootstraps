@@ -53,6 +53,7 @@ Look at the target project root:
 
 - **Greenfield** - no `CLAUDE.md`/`AGENTS.md`, or a thin stub, and no `.claude/knowledge/`. Scaffold from scratch (Step G).
 - **Retrofit** - a `CLAUDE.md`/`AGENTS.md` already carries fat, multi-section implementation detail. Audit and split (Step R).
+- **Refresh** - the project is *already on the pattern*: a lean `CLAUDE.md`/`AGENTS.md` with a `## Knowledge Folder` index and a populated `.claude/knowledge/`. Nothing to scaffold and nothing to migrate. Verify and reconcile (Step V). This is the correct mode for a deliberate re-run, and it must not re-scaffold or re-migrate anything.
 
 Also check for an assistant auto-memory dir for this project (**Claude Code only** - it keeps one at `~/.claude/projects/<project-slug>/memory/` with a `MEMORY.md` index; Devin has no equivalent). If it exists, its codebase-fact entries are migration candidates in Step R. If it doesn't, skip the memory audit - not every project has one.
 
@@ -71,6 +72,37 @@ Always create the folder first: `mkdir -p .claude/knowledge` (safe if it already
 3. **Migrate as a rewrite.** For each fat section or knowledge-class memory, write a clean descriptive `.claude/knowledge/<topic>.md`. Merge related fragments into one topic file rather than mirroring the old split 1:1.
 4. **Slim `CLAUDE.md`/`AGENTS.md`** - replace each moved section with a one-paragraph summary that points to its knowledge file. Add/refresh the `## Knowledge Folder` index.
 5. **Reconcile the memory index** - if you migrated memory entries, remove them from `MEMORY.md` and delete the migrated memory files (they now live, rewritten, in knowledge). Leave point-in-time memories untouched.
+6. **Verify what you moved** (skip only if the migration was trivial). Content that has been accumulating in a fat `CLAUDE.md`/`AGENTS.md` has usually been accumulating *unverified* - nobody re-reads a wall of detail to check whether it is still true. The migration is the one moment someone is reading every line, so check it against the repo rather than carrying stale claims into fresh files where they will look newly authoritative. This is a cursory pass over load-bearing assertions, not a full audit:
+
+   - **Paths, commands, scripts, env vars** - do they still exist? Glob/Grep for them.
+   - **Versions, ports, URLs, service names** - check against manifests, compose files, config.
+   - **"Currently" / "for now" / "temporarily" claims** - these age worst. Each is either still true (drop the hedge) or isn't (fix or cut it).
+   - **Named owners and external references** - can't be verified from the repo; mark, don't guess.
+
+   Correct what you can substantiate, **mark what you cannot** (`> Unverified as of <date>`) rather than deleting it or leaving it stated as fact, and list every correction for the user. Do not silently rewrite a claim you merely doubt - the point is to separate verified from unverified, not to launder uncertainty into confident prose.
+
+## Step V - refresh: verify an already-prepped project
+
+The pattern is in place; this pass checks whether it is still *true* and still *coherent*.
+It is idempotent and safe to re-run at any time. **Create no new knowledge files and move
+no content** - if this pass concludes the project actually needs a migration or a new
+subsystem doc, report that and stop rather than switching modes mid-run.
+
+1. **Verify the assertions** - run the same check as Step R.6 across every file in
+   `.claude/knowledge/`. This is the core of the pass and the usual reason for running it.
+2. **Reconcile the index** - every file in `.claude/knowledge/` should have a bullet in the
+   `## Knowledge Folder` section, and every bullet should point at a file that exists.
+   Report both directions of drift; an unindexed file is invisible to an agent deciding
+   what to open, and a dangling bullet sends it after nothing.
+3. **Check the index hooks still describe the files.** A bullet whose hook no longer
+   matches what the file grew into is worse than a missing one - it actively misroutes.
+4. **Flag split candidates** - a file that has grown to cover two subsystems is a file
+   nobody opens with confidence. Name them; do not split them in this pass.
+5. **Age the `> Unverified as of <date>` markers** - each is either verifiable now
+   (resolve it) or has been unverifiable long enough to say so plainly.
+
+Report what you corrected, what drifted, and what you flagged. If nothing changed, say
+that - "still accurate" is a real and useful result.
 
 ## Conventions (bake these into every output)
 
@@ -84,7 +116,7 @@ subsystem listed below, consult its file first; when you add, remove, or
 meaningfully change the underlying surface (new route, new env var, schema
 change, etc.), update the matching file in the same change.
 
-- `engram.md` — Core architecture: types, query pipeline, ...
+- `storage-engine.md` — Core architecture: types, query pipeline, ...
 - `env-vars.md` — Full environment variable tables
 ```
 

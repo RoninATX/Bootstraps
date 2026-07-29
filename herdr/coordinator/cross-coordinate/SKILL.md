@@ -182,6 +182,37 @@ relay (it just makes the relay longer).
 
 ---
 
+## When accounts conflict: the artifact settles it
+
+Panes report on shared state — a file, a commit, a deployed config — and two of them will
+eventually tell you opposite things about it. Do **not** adjudicate between the reports, and
+do not ask a third pane who's right. **Go read the artifact.** It is the one participant that
+cannot be out of date with itself.
+
+```bash
+# two panes disagree about whether a change landed
+grep -n "the_thing" /path/to/shared/file      # settles it in one command
+```
+
+This matters most when the conflicting reports are *both honest* — the usual cause is a
+message that aged out in flight, or a decision that reached one pane and not another. Neither
+pane is wrong about what it was told; they were told different things. Reading the file skips
+the whole question of who to believe.
+
+**Corollary — a reversal goes to every pane that received the original.** When I broadcast a
+decision and then reverse it on new evidence, the reversal must reach *the same set of panes*,
+not just the pane whose evidence changed my mind. A pane still acting on my earlier instruction
+is following orders correctly; if it then ships something I've since rejected, that is my
+fan-out failure, not its judgment failure. Two habits that prevent it:
+
+- **Write the decision to the tracker before relaying it.** One authoritative record beats N
+  pane-local ones, and a pane that missed a relay can still find the current answer.
+- **On reversal, name the earlier instruction explicitly** — "I told you X; that was before
+  <evidence>; it is now Y" — so the receiving pane can tell whether it already acted on X.
+
+The artifact rule is the backstop for when both habits fail, which is why it's the stronger of
+the two: it doesn't depend on me getting the fan-out right.
+
 ## Don't
 
 - Don't hardcode pane IDs — re-discover by label every time.
@@ -201,3 +232,6 @@ relay (it just makes the relay longer).
   closing, so the requester doesn't stall thinking it's still blocked.
 - Don't leave my own state dangling — every coordination ends either resolved (closed) or
   explicitly handed to the Operator.
+- Don't adjudicate between two panes' conflicting reports about shared state — read the artifact.
+- Don't reverse a decision in one pane only. The reversal goes to every pane that got the
+  original, and the tracker gets it before any of them.

@@ -172,8 +172,12 @@ identical.
 ## What to take away
 
 - **Everything routes through the Coordinator to *start*.** Children never cold-poke each other.
-- **The label is the whole protocol.** `From X:` = a project; `From Coordinator:` = the router;
-  no prefix = you. Get the three classes right and the rest follows.
+- **The label is the core of the protocol.** `From X:` = a project; `From Coordinator:` = the
+  router; no prefix = you. Get the three classes right and most of the rest follows.
+- **The label tells you who, not whether it's still true.** Relays cross panes asynchronously, so
+  one can age out — a decision reaches one pane and not another. When two panes report opposite
+  things about the same file, both are usually being honest. **Go read the artifact**; it can't be
+  out of date with itself. And a reversal goes to *every* pane that got the original.
 - **The Coordinator's real job is timing** — protecting a busy pane from interruption and handing
   off only when it's safe, escalating to you when it's murky.
 - **It scales past two.** Add `project C`, install the child skill with `{AppName}=projC`, and it
