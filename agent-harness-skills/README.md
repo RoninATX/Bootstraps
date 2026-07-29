@@ -27,6 +27,25 @@ the root file points at, which any agent can read regardless of directory name).
 |------|---------|
 | `knowledge-prep/` | Stand up (or retrofit) the lean-index + lazy-loaded `.claude/knowledge/` documentation pattern: a scannable root file that points to per-subsystem deep-context docs, so the root stays cheap to load every session while detail lives one hop away. |
 | `graph-prep/` | Wire in the **segment-graph** pattern on top of that: a *derived* NetworkX graph over the project's issue tracker items **and** its knowledge docs, so an agent retrieves context by actual citation rather than by guessing filenames. Ships with `graphscout.py`. |
+| `up-next/` | Answer *"what should I work on?"* from the tracker rather than from a decaying memory snapshot: active milestones, what's in flight, what's queued, and one recommended next item. Reads only. |
+
+### Skills that assume a tracker
+
+`up-next/` (and the optional graph half of `graph-prep/`) assume the **[beans](https://github.com/aaronsb/beans)**
+CLI — a local, file-backed issue tracker queried over GraphQL. That's a narrower dependency than
+the harness-agnostic claim above, so be explicit about it:
+
+- **`knowledge-prep/` needs no tracker at all.** It works on any repo.
+- **`graph-prep/` degrades gracefully** — the doc↔doc half of the graph works without a tracker;
+  the doc↔work-item half is what needs one.
+- **`up-next/` is tracker-shaped end to end.** The workflow ports to any tracker with a queryable
+  API (Linear, Jira, GitHub Issues); the two queries in Step 1–2 are the only beans-specific part.
+  Swap those and the synthesis, output shape and hand-off are unchanged.
+
+If you're adapting `up-next` to a different tracker, the load-bearing detail is in Step 2: check
+what your tracker's *closed* statuses actually are before filtering on "not completed." A store
+that has accumulated legacy statuses will report long-finished work as open, and an orientation
+tool that overstates open work is worse than none.
 
 ### Skills that ship a script
 
@@ -36,6 +55,15 @@ lines). Two consequences worth knowing before you install it:
 - **Copy the whole folder, not just `SKILL.md`.** If the script is missing, the skill's own
   instructions tell the agent to fetch it from this repo by raw URL — but that only works with
   network access, so prefer copying both files together.
+- **`graphscout.py` here is a GENERATED artifact — do not hand-edit it.** It is produced from the
+  maintainer's reference copy by pure string substitution (project names → placeholders, one real
+  filesystem path → a generic one). Fix bugs in the reference and regenerate; patching this copy
+  directly forks it. That already happened once: two review fixes were applied here by hand while
+  the same fixes were implemented upstream from a written spec, and the builds silently diverged
+  on their *error messages* — behaviourally identical on the happy path, so no test caught it, and
+  anyone pulling this copy over a reference-based install would have quietly traded down on
+  diagnostics. Substitution-only generation makes that class of drift unrepresentable rather than
+  merely discouraged.
 - **The script is vendored per project, not shared.** `graph-prep` deliberately copies
   `graphscout.py` into each project at `.claude/graph/graphscout.py` rather than pointing at one
   central install. A project's scope should stay bound to its own folder; a cross-project script
