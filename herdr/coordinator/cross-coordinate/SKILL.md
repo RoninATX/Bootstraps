@@ -53,9 +53,11 @@ pane that sends most, so a silent delivery failure here strands a child that's w
 
 **Always `pane run`.** A `send-text` green-light strands the whole coordination: the requester
 waits for a sibling that never got the ask, the target sees stray text on its `❯` line, and my
-tracking item says "relayed." Keep every relay to a **single line** so it submits cleanly; if one
-genuinely must span lines, `pane send-text` the block then `herdr pane send-keys <pane> Enter`
-**once**.
+tracking item says "relayed." That the CLI carries a *separate*
+`pane send-keys <pane> Enter` is the corroboration: submitting is its own act.
+
+Keep every relay to a **single line** so it submits cleanly; if one genuinely must span lines,
+`pane send-text` the block then `herdr pane send-keys <pane> Enter` **once**.
 
 ### 2. Prose is not a send
 
@@ -90,8 +92,9 @@ has operator input pending, and a ghost that regenerates looks like a pane I can
 - `herdr agent read <pane> --source visible` (default `--format text`) **strips ANSI**, so a ghost
   suggestion and real unsent input arrive byte-identical. Blind.
 - `herdr agent read <pane> --source visible --ansi` preserves it: a ghost is wrapped in **`\x1b[2m`**
-  (SGR faint) plus grey `\x1b[38;2;153;153;153m` (`#999`). **Real typed input is stark white** —
-  normal intensity, no faint.
+  (SGR faint), usually — but **not always** — also grey `\x1b[38;2;153;153;153m` (`#999`). **Real
+  typed input is stark white** — normal intensity, no faint. The faint code is the invariant; a
+  filter requiring faint *and* grey will wave some ghosts through as real input.
 - Filter on the **`\x1b[2m`** code, not on the `❯` glyph — the glyph decodes to surrogate bytes and
   won't match.
 

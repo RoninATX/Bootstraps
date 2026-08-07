@@ -105,7 +105,8 @@ arrived"), so get these right before anything else in this skill.
 **Always `pane run`.** A `send-text` relay strands your message on the recipient's `❯` line, where
 it looks to them like something they half-typed and to you like a delivered ask. That is the real
 cause of most "the Coordinator never answered me" / "the sibling ignored my relay" reports: the
-message was pasted, never submitted.
+message was pasted, never submitted. That the CLI carries a *separate*
+`pane send-keys <pane> Enter` is the corroboration: submitting is its own act.
 
 Keep every relay to a **single line** so it submits cleanly. If a send genuinely must span lines,
 `pane send-text` the block and then `herdr pane send-keys <pane> Enter` **once** — but prefer one
@@ -146,8 +147,9 @@ whenever you read a pane, including your own.
 - `herdr agent read <pane> --source visible` (default `--format text`) **strips ANSI**, so a ghost
   suggestion and real unsent input arrive byte-identical. Blind.
 - `herdr agent read <pane> --source visible --ansi` preserves it: a ghost is wrapped in **`\x1b[2m`**
-  (SGR faint) plus grey `\x1b[38;2;153;153;153m` (`#999`). **Real typed input is stark white** —
-  normal intensity, no faint.
+  (SGR faint), usually — but **not always** — also grey `\x1b[38;2;153;153;153m` (`#999`). **Real
+  typed input is stark white** — normal intensity, no faint. The faint code is the invariant; a
+  filter requiring faint *and* grey will wave some ghosts through as real input.
 - Filter on the **`\x1b[2m`** code, not on the `❯` glyph — the glyph decodes to surrogate bytes and
   won't match.
 
