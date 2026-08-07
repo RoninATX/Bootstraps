@@ -90,19 +90,26 @@ has operator input pending, and a ghost that regenerates looks like a pane I can
 **The tell is colour, and only `--ansi` shows it:**
 
 - `herdr agent read <pane> --source visible` (default `--format text`) **strips ANSI**, so a ghost
-  suggestion and real unsent input arrive byte-identical. Blind.
-- `herdr agent read <pane> --source visible --ansi` preserves it: a ghost is wrapped in **`\x1b[2m`**
-  (SGR faint), usually — but **not always** — also grey `\x1b[38;2;153;153;153m` (`#999`). **Real
-  typed input is stark white** — normal intensity, no faint. The faint code is the invariant; a
-  filter requiring faint *and* grey will wave some ghosts through as real input.
-- Filter on the **`\x1b[2m`** code, not on the `❯` glyph — the glyph decodes to surrogate bytes and
-  won't match.
+  suggestion and real unsent input arrive byte-identical. Blind. `--ansi` separates them — but only
+  in two steps, and skipping the first is the trap.
+- **Step 1 — locate the composer line by its `❯` glyph (U+276F)**, decoding the read as **UTF-8**;
+  the glyph *is* matchable. (Decode as cp1252 and you get mojibake surrogates — that reader bug is
+  where the folk advice "don't match the glyph" came from.) Fallback anchor: the composer sits
+  between the input box's last two `─` rules.
+- **Step 2 — on that line only**, test for faint: text wrapped in **`\x1b[2m`** is a ghost; text
+  with no faint is real typed input.
+- **Never faint-test the whole read.** `\x1b[2m` is ordinary transcript chrome — bullet glyphs,
+  line numbers, tree characters, truncated JSON. A six-pane sweep found faint on 67 lines, **none**
+  of them a composer ghost. Faint is necessary, not sufficient; position is what decides.
+- **The grey `\x1b[38;2;153;153;153m` (`#999`) is the `❯` marker's own colour**, not a ghost tell —
+  it appears on empty composers with no ghost at all. Don't test for it in either direction.
 
 **Rules:**
 
 1. The composer line is **not** part of the interruptibility test. Classify from the **transcript
    above the input box** plus `agent_status` only.
-2. If I must inspect composer content, read with `--ansi` and **discard any faint line**.
+2. If I must inspect composer content: find the `❯` line (UTF-8), then faint-test **that line** —
+   not the transcript around it.
 3. **Sending is unaffected** — `pane run` types real characters over whatever placeholder is
    showing, so I can never accidentally send a ghost and never need to clear one first. Don't
    chase it: Escape-then-run races, and the suggestion regenerates anyway.

@@ -111,7 +111,8 @@ Send each pane's commands sequentially, with a short beat (~0.5s) between them s
 **A caveat on reading `❯` here:** Claude Code auto-fills the composer with a *suggested* next
 prompt derived from that pane's last turn. It is not operator input and does not mean the pane is
 dirty or busy — a plain-text read can't distinguish it (only `herdr agent read <pane> --ansi` can;
-ghosts are faint `\x1b[2m` grey, real input is stark white). Don't try to clear one before
+locate the `❯` line, then faint-test *that line only* — `\x1b[2m` elsewhere in a read is
+ordinary transcript chrome). Don't try to clear one before
 injecting: `pane run` types over any placeholder, so just send.
 
 Because `/rc` opens the panel, keep it **last** of the three per pane (as ordered above), and

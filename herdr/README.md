@@ -72,9 +72,10 @@ skills spell them out, and neither is optional reading:
   *agent send writes literal text; use pane run when you want command text plus Enter*.)
 - **The `❯` composer line lies.** Claude Code auto-fills it with a machine-generated *suggested*
   prompt derived from that pane's last turn. A plain-text read can't tell it from real unsent
-  operator input — only `agent read --ansi` can (ghosts are faint `\x1b[2m` grey; real input is
-  stark white). Never judge a pane's state, its interruptibility, or the Operator's intent from
-  that line.
+  operator input — only `agent read --ansi` can, and only in two steps: locate the composer by its
+  `❯` glyph (decoding UTF-8), *then* faint-test that one line (`\x1b[2m` = ghost). Faint-testing a
+  whole read is a false-positive machine — `\x1b[2m` is also ordinary transcript chrome. Never
+  judge a pane's state, its interruptibility, or the Operator's intent from that line.
 
 ## What's here
 
