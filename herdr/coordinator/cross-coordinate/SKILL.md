@@ -99,7 +99,8 @@ has operator input pending, and a ghost that regenerates looks like a pane I can
   call a diff line a ghost. The rules alone fabricate a composer on a pane that has none — 2 of 8
   panes swept (non-Claude agents) had zero `❯` lines while a last-two-rules span happily bracketed
   ordinary transcript. **No `❯` line means no visible composer: infer nothing.** Across the 6 panes
-  that had one it was always the last glyph match, always 2 lines from the end. (cp1252 decoding
+  that had one it was always the last glyph match. It usually lands within the last two or three
+  lines — but don't implement a fixed offset; the anchor is the rule. (cp1252 decoding
   yields mojibake, which is where the folk advice "don't match the glyph" came from.)
 - **Step 2 — on that line only**, test for faint: text wrapped in **`\x1b[2m`** is a ghost; text
   with no faint is real typed input.
