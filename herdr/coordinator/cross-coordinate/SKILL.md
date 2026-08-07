@@ -92,10 +92,15 @@ has operator input pending, and a ghost that regenerates looks like a pane I can
 - `herdr agent read <pane> --source visible` (default `--format text`) **strips ANSI**, so a ghost
   suggestion and real unsent input arrive byte-identical. Blind. `--ansi` separates them — but only
   in two steps, and skipping the first is the trap.
-- **Step 1 — locate the composer line by its `❯` glyph (U+276F)**, decoding the read as **UTF-8**;
-  the glyph *is* matchable. (Decode as cp1252 and you get mojibake surrogates — that reader bug is
-  where the folk advice "don't match the glyph" came from.) Fallback anchor: the composer sits
-  between the input box's last two `─` rules.
+- **Step 1 — locate the composer: the LAST `❯` line (U+276F, decoded as UTF-8) that sits between
+  the input box's final two `─` rules.** Take **both** conditions; each alone has a live failure
+  mode. The glyph alone hits transcript content — a pane displaying a doc *about* this rule had 5
+  glyph matches, 4 of them prose, the first faint from line-number chrome, so step 1 + step 2 would
+  call a diff line a ghost. The rules alone fabricate a composer on a pane that has none — 2 of 8
+  panes swept (non-Claude agents) had zero `❯` lines while a last-two-rules span happily bracketed
+  ordinary transcript. **No `❯` line means no visible composer: infer nothing.** Across the 6 panes
+  that had one it was always the last glyph match, always 2 lines from the end. (cp1252 decoding
+  yields mojibake, which is where the folk advice "don't match the glyph" came from.)
 - **Step 2 — on that line only**, test for faint: text wrapped in **`\x1b[2m`** is a ghost; text
   with no faint is real typed input.
 - **Never faint-test the whole read.** `\x1b[2m` is ordinary transcript chrome — bullet glyphs,
@@ -301,7 +306,9 @@ the two: it doesn't depend on me getting the fan-out right.
   murky, hand the timing to the Operator and wait for "now is a good time."
 - Don't judge interruptibility (or Operator intent) from a pane's `❯` composer line — it's
   normally a machine-generated ghost suggestion. Transcript + `agent_status` only; if I must look,
-  read `--ansi` and discard the faint (`\x1b[2m`) lines.
+  locate the composer line first, then faint-test **that line only**.
+- Don't faint-test a whole read to find a ghost — `\x1b[2m` is common transcript chrome and will
+  flag dozens of innocent lines. Position first, faint second.
 - Don't deliver a relay with `pane send-text` or `agent send` — no Enter means it sits unsent in
   the target's composer while I record it as relayed. `pane run` or it didn't happen.
 - Don't count narrating a green-light as sending one — prose reaches the Operator, not the pane.

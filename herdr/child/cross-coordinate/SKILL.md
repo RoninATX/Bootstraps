@@ -147,10 +147,15 @@ whenever you read a pane, including your own.
 - `herdr agent read <pane> --source visible` (default `--format text`) **strips ANSI**, so a ghost
   suggestion and real unsent input arrive byte-identical. Blind. `--ansi` separates them — but only
   in two steps, and skipping the first is the trap.
-- **Step 1 — locate the composer line by its `❯` glyph (U+276F)**, decoding the read as **UTF-8**;
-  the glyph *is* matchable. (Decode as cp1252 and you get mojibake surrogates — that reader bug is
-  where the folk advice "don't match the glyph" came from.) Fallback anchor: the composer sits
-  between the input box's last two `─` rules.
+- **Step 1 — locate the composer: the LAST `❯` line (U+276F, decoded as UTF-8) that sits between
+  the input box's final two `─` rules.** Take **both** conditions; each alone has a live failure
+  mode. The glyph alone hits transcript content — a pane displaying a doc *about* this rule had 5
+  glyph matches, 4 of them prose, the first faint from line-number chrome, so step 1 + step 2 would
+  call a diff line a ghost. The rules alone fabricate a composer on a pane that has none — 2 of 8
+  panes swept (non-Claude agents) had zero `❯` lines while a last-two-rules span happily bracketed
+  ordinary transcript. **No `❯` line means no visible composer: infer nothing.** Across the 6 panes
+  that had one it was always the last glyph match, always 2 lines from the end. (cp1252 decoding
+  yields mojibake, which is where the folk advice "don't match the glyph" came from.)
 - **Step 2 — on that line only**, test for faint: text wrapped in **`\x1b[2m`** is a ghost; text
   with no faint is real typed input.
 - **Never faint-test the whole read.** `\x1b[2m` is ordinary transcript chrome — bullet glyphs,
@@ -282,8 +287,10 @@ read.
 - Don't put backtick characters inside a `herdr pane run "..."` string — bash will
   command-substitute them and mangle the relay.
 - Don't read anything into another pane's `❯` composer line — it's usually a machine-generated
-  ghost suggestion, not typed input. Judge by transcript + `agent_status`; if you must look, read
-  `--ansi` and discard the faint (`\x1b[2m`) lines.
+  ghost suggestion, not typed input. Judge by transcript + `agent_status`; if you must look, locate
+  the composer line first, then faint-test **that line only**.
+- Don't faint-test a whole read to find a ghost — `\x1b[2m` is common transcript chrome and will
+  flag dozens of innocent lines. Position first, faint second.
 - Don't send a fat multi-paragraph relay when you have a tracker — the item carries the detail, the
   relay is one line + ID.
 - Don't hand a sibling a bare tracker ID — it's repo-local; give an absolute-path / `--path`
