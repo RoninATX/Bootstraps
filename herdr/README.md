@@ -60,6 +60,22 @@ instruction is following orders correctly — that's a fan-out failure, not a ju
 artifact rule is the backstop for when the fan-out fails anyway, which is why it's the stronger
 of the two: it doesn't depend on the Coordinator getting the broadcast right.
 
+### Two delivery mechanics the protocol rests on
+
+The labeling law only works if messages actually arrive. Two things break that silently — both
+skills spell them out, and neither is optional reading:
+
+- **`pane run`, always.** `herdr pane run <pane> "<text>"` types the text *and presses Enter*.
+  `pane send-text` and `agent send` write the characters with **no** Enter, stranding your relay
+  unsent in the recipient's composer: delivered from your side, invisible from theirs. Most
+  "the other pane ignored me" incidents are this. (herdr's own `agent --help` says it outright:
+  *agent send writes literal text; use pane run when you want command text plus Enter*.)
+- **The `❯` composer line lies.** Claude Code auto-fills it with a machine-generated *suggested*
+  prompt derived from that pane's last turn. A plain-text read can't tell it from real unsent
+  operator input — only `agent read --ansi` can (ghosts are faint `\x1b[2m` grey; real input is
+  stark white). Never judge a pane's state, its interruptibility, or the Operator's intent from
+  that line.
+
 ## What's here
 
 | Path                                   | Role        | Genericized from | Purpose |
@@ -100,7 +116,9 @@ Notes:
   is a custom skill you may or may not have.
 - The platform gotchas the skills call out (Git Bash mangling a leading `/` into a Windows path;
   bash command-substituting backticks inside `herdr pane run "..."`) are Windows/Git-Bash
-  specific — on a pure-POSIX host you can relax them, but they're harmless to keep.
+  specific — on a pure-POSIX host you can relax them, but they're harmless to keep. The two
+  delivery mechanics above (`pane run` vs. `send-text`; ghost composer suggestions) are **not**
+  platform-specific — keep those verbatim.
 
 ## Preconditions (all three skills)
 

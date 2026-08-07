@@ -130,7 +130,8 @@ Step by step, and *which skill fires when*:
 
 1. **web raises the ask (child `cross-coordinate`, outbound).** web opens a tracking item
    (`gh issue` #42 with the contract detail), then injects **one line** into the Coordinator's
-   pane — never straight to `api`:
+   pane with `herdr pane run` (the form that supplies the Enter — `send-text` would leave it
+   sitting unsent in the Coordinator's composer) — never straight to `api`:
    > `From web: need GET /users/:id to return avatar_url so the profile page can render it. Needs api. Detail in acme/web#42.`
 
    Then it **stops reaching toward api** and does what web-side work it can while it waits.
@@ -180,5 +181,8 @@ identical.
   out of date with itself. And a reversal goes to *every* pane that got the original.
 - **The Coordinator's real job is timing** — protecting a busy pane from interruption and handing
   off only when it's safe, escalating to you when it's murky.
+- **Delivery is the floor under all of it.** Send with `pane run` (text *plus* Enter) or the
+  message never submits, and never judge a pane's readiness from its `❯` line — that's usually a
+  machine-generated ghost suggestion, not something you typed.
 - **It scales past two.** Add `project C`, install the child skill with `{AppName}=projC`, and it
   joins the same board — no change to the others.

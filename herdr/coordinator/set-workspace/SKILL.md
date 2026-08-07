@@ -71,10 +71,16 @@ herdr pane rename <AppB>         "{AppB}"
 ## Step 3 — Drive each agent's Claude-side setup
 
 Inject these as real typed input via `herdr pane run <pane> "<slash-command>"` — one call per
-line, in order. **On Windows, send them through the PowerShell tool** (or Bash prefixed with
-`MSYS_NO_PATHCONV=1`): Git Bash mangles a leading `/` into a Windows path
-(`/rename` → `C:/Program Files/Git/rename`) and the command arrives as garbage. (Pure-POSIX
-hosts don't have this trap.)
+line, in order. Two things about that:
+
+- **`pane run` is the only form that submits.** It types the text *and* presses Enter;
+  `pane send-text` / `agent send` write the characters with **no** Enter, leaving the slash
+  command sitting unexecuted in the composer. A pane that "ignored" its `/rename` was almost
+  always sent without an Enter.
+- **On Windows, send them through the PowerShell tool** (or Bash prefixed with
+  `MSYS_NO_PATHCONV=1`): Git Bash mangles a leading `/` into a Windows path
+  (`/rename` → `C:/Program Files/Git/rename`) and the command arrives as garbage. (Pure-POSIX
+  hosts don't have this trap.)
 
 Per child pane, in order — pick a distinct `/color` for each so panes are visually separable:
 
@@ -101,6 +107,12 @@ Send each pane's commands sequentially, with a short beat (~0.5s) between them s
   connected. **After sending `/rc`, dismiss the panel** with
   `herdr pane send-keys <pane> Escape` so the pane returns to a clean `❯` prompt — do this before
   Step 4, since an open RC panel will eat the next injected input.
+
+**A caveat on reading `❯` here:** Claude Code auto-fills the composer with a *suggested* next
+prompt derived from that pane's last turn. It is not operator input and does not mean the pane is
+dirty or busy — a plain-text read can't distinguish it (only `herdr agent read <pane> --ansi` can;
+ghosts are faint `\x1b[2m` grey, real input is stark white). Don't try to clear one before
+injecting: `pane run` types over any placeholder, so just send.
 
 Because `/rc` opens the panel, keep it **last** of the three per pane (as ordered above), and
 Esc-dismiss it. No verification pass on rename/color — fire and move on.

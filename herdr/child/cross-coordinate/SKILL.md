@@ -88,6 +88,80 @@ every send.
 
 ---
 
+## Sending into another pane — the mechanics that make a message land
+
+Every message in this protocol is **injected input**: you are typing into someone else's live
+session. Two failure modes look identical from your side ("I sent it") and from theirs ("nothing
+arrived"), so get these right before anything else in this skill.
+
+### 1. Text without an Enter never submits
+
+| Command | What it actually does |
+|---------|-----------------------|
+| `herdr pane run <pane> "<text>"` | types the text **and presses Enter** — delivered as a turn |
+| `herdr pane send-text <pane> "<text>"` | types the text, **no Enter** — it sits unsent in their composer |
+| `herdr agent send <target> "<text>"` | same — literal text, **no Enter** |
+
+**Always `pane run`.** A `send-text` relay strands your message on the recipient's `❯` line, where
+it looks to them like something they half-typed and to you like a delivered ask. That is the real
+cause of most "the Coordinator never answered me" / "the sibling ignored my relay" reports: the
+message was pasted, never submitted.
+
+Keep every relay to a **single line** so it submits cleanly. If a send genuinely must span lines,
+`pane send-text` the block and then `herdr pane send-keys <pane> Enter` **once** — but prefer one
+line plus a pointer to the durable note.
+
+### 2. Prose is not a send
+
+Your ordinary output reaches the **Operator only**. It never appears in another pane. Writing
+"I'll let {SiblingApp} know" is not letting them know — the *only* channel to another pane is an
+explicit `pane run`.
+
+### 3. Sends are fire-and-forget
+
+`pane run` prints nothing on success and there is no ack. A response comes back only as a labeled
+inbound turn (`From {SiblingApp}:` / `From Coordinator:`), on the recipient's own timing. For a
+send that won't draw a reply — a status ping, a close-out — confirm it landed with
+`herdr pane read <target> --source recent --lines 20` rather than assuming.
+
+### 4. Two characters that mangle the string
+
+- **Backticks** — bash command-substitutes them inside `herdr pane run "..."`. Write field and
+  event names as plain text (`user_id` → user_id).
+- **A leading `/`** — Git Bash on Windows path-converts it (`/rename` becomes
+  `C:/Program Files/Git/rename`) and the target receives garbage. Send slash-prefixed payloads via
+  **PowerShell**, or prefix the bash call with `MSYS_NO_PATHCONV=1`. (Pure-POSIX hosts are fine.)
+
+---
+
+## The `❯` composer line lies — ghost suggestions
+
+Claude Code auto-populates a pane's composer (`❯`) line with a **suggested next prompt** it
+generates from that pane's last turn. Nobody typed it. It reads like plausible Operator input
+precisely *because* it's derived from the pane's own context — which is what makes it dangerous
+whenever you read a pane, including your own.
+
+**The tell is colour, and only `--ansi` shows it:**
+
+- `herdr agent read <pane> --source visible` (default `--format text`) **strips ANSI**, so a ghost
+  suggestion and real unsent input arrive byte-identical. Blind.
+- `herdr agent read <pane> --source visible --ansi` preserves it: a ghost is wrapped in **`\x1b[2m`**
+  (SGR faint) plus grey `\x1b[38;2;153;153;153m` (`#999`). **Real typed input is stark white** —
+  normal intensity, no faint.
+- Filter on the **`\x1b[2m`** code, not on the `❯` glyph — the glyph decodes to surrogate bytes and
+  won't match.
+
+**Rules:**
+
+1. Never read the composer line as pane state or as Operator intent. Judge from the **transcript
+   above the input box** plus `herdr agent get <pane>` / `herdr agent list` `agent_status`.
+2. If you must inspect composer content, read with `--ansi` and **discard any faint line**.
+3. **Sending is unaffected** — `pane run` types real characters over whatever placeholder is
+   showing, so you can never accidentally send a ghost and never need to clear one first. Don't
+   chase it: Escape-then-run races, and the suggestion regenerates anyway.
+
+---
+
 ## Outbound flow — raising an ask
 
 ### 1. Back it with a durable note (recommended)
@@ -120,11 +194,10 @@ turn, the "next convenient interrupt"):
 herdr pane run "<coordinator-pane-id>" "From {AppName}: <one-line ask>. Needs <sibling>. Detail in <item-id>."
 ```
 
-Use `pane run` (text + a real Enter) with a **single-line** message so it submits cleanly. If you
-must send multiple lines, `pane send-text` the block then `pane send-keys <pane> Enter` once — but
-prefer one line + tracker item. **Never put backtick characters inside the `herdr pane run "..."`
-string** — bash command-substitutes them and mangles the send. Write field/event names in plain
-text (write `user_id` as user_id, not wrapped in backticks).
+`pane run` (not `send-text` / `agent send`) with a **single-line**, backtick-free message — see
+*Sending into another pane* above for why each of those matters. It's fire-and-forget: nothing
+confirms delivery, so if you want certainty the relay landed, `herdr pane read <coordinator-pane>
+--source recent` rather than assuming.
 
 ### 4. Then wait — do not touch the sibling
 
@@ -142,9 +215,8 @@ your pane clearly labeled — e.g. `From {SiblingApp}:`. That label is how you k
 **not** the Operator (unlabeled turns are the Operator; a `From Coordinator:` turn is the
 Coordinator).
 
-- Reply into **their** pane, always prefixed `From {AppName}:`. **Never put backtick characters
-  inside the `herdr pane run "..."` string** — bash command-substitutes them and mangles the send;
-  write the message in plain text:
+- Reply into **their** pane, always prefixed `From {AppName}:`, via `pane run` and in plain text
+  (no backticks — see *Sending into another pane*):
   ```bash
   herdr pane run "<sibling-pane-id>" "From {AppName}: confirmed - the field ships in the frame. Two questions: ..."
   ```
@@ -192,8 +264,17 @@ read.
 - Don't open a coordination by messaging a sibling directly — it goes through the Coordinator.
 - Don't mistake a `From Coordinator:` turn for the Operator — it's the interrupt-buffer, a distinct
   third class.
+- Don't deliver a relay with `pane send-text` or `agent send` — they type the text with **no
+  Enter**, so it sits unsent in the recipient's composer. `pane run` or it didn't happen.
+- Don't treat saying something in prose as messaging another pane — your output goes to the
+  Operator only; the pane hears nothing without an explicit `pane run`.
+- Don't assume a no-reply send (status ping, close-out) landed — `pane read --source recent` the
+  target if it matters.
 - Don't put backtick characters inside a `herdr pane run "..."` string — bash will
   command-substitute them and mangle the relay.
+- Don't read anything into another pane's `❯` composer line — it's usually a machine-generated
+  ghost suggestion, not typed input. Judge by transcript + `agent_status`; if you must look, read
+  `--ansi` and discard the faint (`\x1b[2m`) lines.
 - Don't send a fat multi-paragraph relay when you have a tracker — the item carries the detail, the
   relay is one line + ID.
 - Don't hand a sibling a bare tracker ID — it's repo-local; give an absolute-path / `--path`

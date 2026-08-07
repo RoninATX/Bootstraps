@@ -38,6 +38,72 @@ Map by **label** (cwd as tiebreak): `Coordinator` (this pane, cwd = `{workspace-
 one pane per child app (cwd = `{workspace-root}/<AppName>`). Take each `pane_id` from the JSON
 fresh; if labels drifted, re-run rather than reusing an old ID.
 
+## Sending into a child pane — the mechanics that make a message land
+
+Every relay I inject is **typed input into someone else's live session**. As the router I'm the
+pane that sends most, so a silent delivery failure here strands a child that's waiting on me.
+
+### 1. Text without an Enter never submits
+
+| Command | What it actually does |
+|---------|-----------------------|
+| `herdr pane run <pane> "<text>"` | types the text **and presses Enter** — delivered as a turn |
+| `herdr pane send-text <pane> "<text>"` | types the text, **no Enter** — it sits unsent in their composer |
+| `herdr agent send <target> "<text>"` | same — literal text, **no Enter** |
+
+**Always `pane run`.** A `send-text` green-light strands the whole coordination: the requester
+waits for a sibling that never got the ask, the target sees stray text on its `❯` line, and my
+tracking item says "relayed." Keep every relay to a **single line** so it submits cleanly; if one
+genuinely must span lines, `pane send-text` the block then `herdr pane send-keys <pane> Enter`
+**once**.
+
+### 2. Prose is not a send
+
+My ordinary output reaches the **Operator only** — it never appears in a child's pane. Narrating
+"green-lighting {AppB} now" is not green-lighting anyone; only an explicit `pane run` is.
+
+### 3. Sends are fire-and-forget
+
+`pane run` prints nothing on success and there's no ack. A child's answer comes back only as a
+`From <App>:` turn on its own timing. That's fine for an ask (the reply *is* the confirmation),
+but for a send that draws no reply — a status note, the Step 2c close-out relay — confirm with
+`herdr pane read <target> --source recent --lines 20` before recording it as delivered.
+
+### 4. Two characters that mangle the string
+
+- **Backticks** — bash command-substitutes them inside `herdr pane run "..."`. Write field and
+  event names as plain text (`user_id` → user_id).
+- **A leading `/`** — Git Bash on Windows path-converts it (`/rename` becomes
+  `C:/Program Files/Git/rename`) and the target receives garbage. Send slash-prefixed payloads via
+  **PowerShell**, or prefix the bash call with `MSYS_NO_PATHCONV=1`. (Pure-POSIX hosts are fine.)
+
+## The `❯` composer line lies — ghost suggestions
+
+Claude Code auto-populates a pane's composer (`❯`) line with a **suggested next prompt** it
+generates from that pane's last turn. Nobody typed it. It reads like plausible Operator input
+precisely *because* it's derived from the pane's own context. This bites me hardest in Step 2a,
+where I'm judging whether a child is safe to interrupt: a ghost makes an idle pane look like it
+has operator input pending, and a ghost that regenerates looks like a pane I can't get clean.
+
+**The tell is colour, and only `--ansi` shows it:**
+
+- `herdr agent read <pane> --source visible` (default `--format text`) **strips ANSI**, so a ghost
+  suggestion and real unsent input arrive byte-identical. Blind.
+- `herdr agent read <pane> --source visible --ansi` preserves it: a ghost is wrapped in **`\x1b[2m`**
+  (SGR faint) plus grey `\x1b[38;2;153;153;153m` (`#999`). **Real typed input is stark white** —
+  normal intensity, no faint.
+- Filter on the **`\x1b[2m`** code, not on the `❯` glyph — the glyph decodes to surrogate bytes and
+  won't match.
+
+**Rules:**
+
+1. The composer line is **not** part of the interruptibility test. Classify from the **transcript
+   above the input box** plus `agent_status` only.
+2. If I must inspect composer content, read with `--ansi` and **discard any faint line**.
+3. **Sending is unaffected** — `pane run` types real characters over whatever placeholder is
+   showing, so I can never accidentally send a ghost and never need to clear one first. Don't
+   chase it: Escape-then-run races, and the suggestion regenerates anyway.
+
 ## Step 1 — Receive & parse the relay
 
 From a `From <Origin>:` turn, pull out:
@@ -83,9 +149,11 @@ herdr agent list                                   # target's agent_status
 herdr agent read <target-pane> --source visible --lines ~20
 ```
 
-Classify what I see:
-- **Safe-idle** — `agent_status: idle`, an empty `❯` prompt, no pending question/dialog on
-  screen → **go now** (Step 2b).
+Classify what I see — from the **transcript and `agent_status`**, never from the `❯` composer line
+(whatever sits there is almost always a ghost suggestion, not operator input — see *The `❯`
+composer line lies*):
+- **Safe-idle** — `agent_status: idle`, the last turn visibly finished, no pending
+  question/dialog on screen → **go now** (Step 2b).
 - **Working** — `agent_status: working` / actively mid-task → **don't interrupt.** Either hand to
   the Operator (below) or set a light background re-check
   (`herdr agent wait <target> --status idle` run in the background, or a short poll loop), then
@@ -103,8 +171,9 @@ go-signal to run Step 2b for the buffered ask.
 
 ### 2b. Release the ask — relay + green-light
 
-Inject one `From Coordinator:` message into the **target's** pane (via `pane run`; send
-slash-free text so Git Bash is fine, but PowerShell is always safe). It must carry:
+Inject one `From Coordinator:` message into the **target's** pane — one line, via `pane run` so it
+actually submits, backtick-free, PowerShell-sent if it carries a leading `/` or a Windows path
+(see *Sending into a child pane*). It must carry:
 
 1. **Who's seeking help** — the requesting child's name **and pane_id**.
 2. **The request summary** — the one-line ask.
@@ -220,6 +289,14 @@ the two: it doesn't depend on me getting the fan-out right.
   Operator's.
 - Don't interrupt a `working` or awaiting-input target on my own judgment — safe-idle only; when
   murky, hand the timing to the Operator and wait for "now is a good time."
+- Don't judge interruptibility (or Operator intent) from a pane's `❯` composer line — it's
+  normally a machine-generated ghost suggestion. Transcript + `agent_status` only; if I must look,
+  read `--ansi` and discard the faint (`\x1b[2m`) lines.
+- Don't deliver a relay with `pane send-text` or `agent send` — no Enter means it sits unsent in
+  the target's composer while I record it as relayed. `pane run` or it didn't happen.
+- Don't count narrating a green-light as sending one — prose reaches the Operator, not the pane.
+- Don't record a no-reply send (a close-out, a status note) as delivered without a
+  `pane read --source recent` on the target.
 - Don't forget the three reminders in the green-light message: pane of the requester,
   `From <App>:` role-play, and check back with me on completion.
 - Don't cite a cross-repo tracker item as a bare ID in a relay — the target's tracker is local
